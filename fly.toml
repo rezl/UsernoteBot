@@ -1,0 +1,11 @@
+# fly.toml file generated for usernotebot on 2022-12-13T13:49:41Z
+
+app = "usernotebot"
+kill_signal = "SIGINT"
+kill_timeout = 5
+processes = []
+
+[build]
+  builder = "paketobuildpacks/builder:base"
+
+[env]
