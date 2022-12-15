@@ -1,26 +1,29 @@
 # Overview
 usernotebot enables writing usernotes or removal comments by [/r/collapse](https://www.reddit.com/r/collapse) moderators via discord. This is targeted at creating a better mobile modding experience
-Prompt bot in discord (Collapse server or bot DM) with .help and .help usernote
+Prompt bot in discord (Collapse server or bot DM) with `.help` and `.help usernote`
 
 # Details
-Workflow:
+## Workflow:
 1. Prompt bot in discord (Collapse server or bot DM), eg `.usernote`
 
 ![img.png](pictures/readme-usernote.png)
+
 3. The bot will respond with your recent comment or post removal action(s)
 
 ![img.png](pictures/readme-embed.png)
+
 4. Click the respective button to usernote or remove the embed
 5. Fill out the usernote prompt and submit
 
 ![img.png](pictures/readme-modal.png)
+
 6. Congrats! You've usernoted! 
    1. You could write a usernote with simply 3 easy actions:
       1. `.usernote`
       2. Click green button
       3. Click Submit, which would create a usernote "R1"
 
-Mod Action Summary:
+## Mod Action Summary:
 * Mod Action Summary: url to the actioned content
 * Acting Mod: your name from the mod action
 * Action Type: removed comment or post
@@ -31,7 +34,7 @@ Mod Action Summary:
 
 ![img.png](pictures/readme-embed.png)
 
-Usernote Creation:
+## Usernote Creation:
 * Target User: user to usernote
 * Type: the usernote type, included in the usernote (see below)
 * Rule# (integer): rule broken (must match the rule in the subreddit, i.e. `1` would indicate R1 has been broken. This is included in both the usernote and removal reason
@@ -41,7 +44,7 @@ Usernote Creation:
 ![img.png](pictures/readme-modal.png)
 
 
-Note:
+## Note:
 * The bot also responds to `.un` `.a` `.act` `.action`, to provide best mobile experience (ie fewest typing)
 * All reddit actions are by the bot (usernotes, comments)
 * Your discord server or display name must match your Reddit username
