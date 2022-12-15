@@ -30,12 +30,12 @@ usernote_description = f"{usernote_brief}\n" \
                        f"  * Action Type: mod action, removelink or removecomment\n" \
                        f"  * Target User: the user actioned by this mod action\n" \
                        f"  * URL: url to the content (to help mod identify content)\n" \
-                       f"  * Content: post title or comment content\n" \
+                       f"  * Post Title: if post\n" \
+                       f"  * Comment Body: if comment\n" \
                        f"\n" \
                        f"Usernote Creation:\n" \
-                       f"  * Target User: the user actioned by this mod action (normally, do not change this)\n" \
-                       f"  * Type: the usernote type, included in the usernote. " \
-                       f"If input does not match any usernote types, the bot will tell you\n" \
+                       f"  * Target User: user to usernote\n" \
+                       f"  * Type: the usernote type, included in the usernote (see below)\n" \
                        f"  * Rule# (integer): rule broken (must match the rule in the subreddit, " \
                        f"i.e. \"1\" would indicate R1 has been broken." \
                        f" This is included in both the usernote and removal reason\n" \
@@ -44,10 +44,10 @@ usernote_description = f"{usernote_brief}\n" \
                        f"if yes, bot will also add a removal reason indicating the rule broken\n" \
                        f"\n" \
                        f"Note:\n" \
-                       f"  * Comments: bot, Usernotes: YOU\n" \
-                       f"  * Your discord server name must match your Reddit username " \
-                       f"(if not, all mods' actioned are shown, but you cannot action them)\n" \
-                       f"  * The supported usernote types are: {mapdata}"
+                       f"  * All reddit actions are by the bot (usernotes, comments)\n" \
+                       f"  * Your discord server or display name must match your Reddit username\n" \
+                       f"  * The supported usernote types are (using any of the [] will map to the left-most word)" \
+                       f": {mapdata}"
 
 
 def get_username(guild, user):
