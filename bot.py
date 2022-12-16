@@ -154,7 +154,9 @@ def run_forever():
                     embed.add_field(name="Target User", value=mod_action.target_author, inline=True)
                     embed.add_field(name="URL", value=mod_action.target_permalink, inline=False)
                     if is_comment:
-                        embed.add_field(name="Comment Body", value=mod_action.target_body, inline=False)
+                        comment_truc = (mod_action.target_body[:300] + '...')\
+                            if len(mod_action.target_body) > 300 else mod_action.target_body
+                        embed.add_field(name="Comment Body", value=comment_truc, inline=False)
                     else:
                         embed.add_field(name="Post Title", value=mod_action.target_title, inline=False)
                     embed.set_footer(text=f"I will monitor this message for 5 minutes. Requested by {mod}")
