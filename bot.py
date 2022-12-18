@@ -14,7 +14,7 @@ import praw
 
 import settings
 from discord_client import DiscordClient
-from usernote_handler import UsernoteHandler, note_type_translation, mapdata
+from reddit_actions_handler import RedditActionsHandler, note_type_translation, mapdata
 
 usernote_brief = "Used to create toolbox usernotes and removal comments"
 usernote_description = f"{usernote_brief}\n" \
@@ -89,7 +89,7 @@ def run_forever():
         check_for_async=False
     )
     subreddit = reddit.subreddit(subreddits)
-    usernote_handler = UsernoteHandler(reddit, subreddit)
+    reddit_actions_handler = RedditActionsHandler(reddit, subreddit)
 
     while not client.is_ready:
         time.sleep(1)
@@ -178,7 +178,7 @@ def run_forever():
                     else:
                         embed.add_field(name="Post Title", value=mod_action.target_title, inline=False)
                     embed.set_footer(text=f"I will monitor this message for 5 minutes. Requested by {mod}")
-                    await ctx.send(embed=embed, view=MyView(collapse_guild, usernote_handler, is_comment))
+                    await ctx.send(embed=embed, view=MyView(collapse_guild, reddit_actions_handler, is_comment))
                 if actions_count >= num_retrieved_mod_removals:
                     break
             # no actions found for a mod, so that probably means provided mod name doesn't exist
@@ -197,12 +197,12 @@ def run_forever():
             if comment.author not in get_cached_mods():
                 continue
             try:
-                handle_mod_response(comment, usernote_handler)
+                handle_mod_response(comment, reddit_actions_handler)
             except Exception as e:
                 message = f"Exception in comment processing: {e}\n```{traceback.format_exc()}```"
                 client.send_error_msg(message)
                 print(message)
-                usernote_handler.send_message(comment.author, "Error during removal request processing",
+                reddit_actions_handler.send_message(comment.author, "Error during removal request processing",
                                               f"I've encountered an error whilst actioning your removal request:  \n\n"
                                               f"URL: https://www.reddit.com{comment.permalink}  \n\n"
                                               f"Error: {e}\n\n"
@@ -211,7 +211,7 @@ def run_forever():
                                               f"e.g. \".r 1,2,3\", please raise this issue to the developers.")
 
 
-def handle_mod_response(mod_comment, usernote_handler):
+def handle_mod_response(mod_comment, reddit_actions_handler):
     split = mod_comment.body.split(" ")
     # early check to prevent querying for parent etc if not even a command
     if split[0] not in [".r", ".n"]:
@@ -221,7 +221,7 @@ def handle_mod_response(mod_comment, usernote_handler):
     print(f"Action request: {mod_comment.author.name} for {rules_str}: {mod_comment.permalink}")
     actionable_comment = mod_comment.parent()
     url = f"https://www.reddit.com{actionable_comment.permalink}"
-    notes = usernote_handler.toolbox.usernotes.list_notes(actionable_comment.author.name, reverse=True)
+    notes = reddit_actions_handler.toolbox.usernotes.list_notes(actionable_comment.author.name, reverse=True)
     for note in notes:
         if note.url is None:
             continue
@@ -233,15 +233,15 @@ def handle_mod_response(mod_comment, usernote_handler):
 
     if split[0] == ".r":
         print(f"Removing+Usernoting: {actionable_comment.author.name} for {rules_str}: {actionable_comment.permalink}")
-        usernote_handler.write_removal_reason(url, rules, True)
-        usernote_handler.write_usernote(url, actionable_comment.author.name, None, rules_str)
-        usernote_handler.remove_comment("Mod removal request: mod", mod_comment)
-        usernote_handler.remove_comment("Mod removal request: user", actionable_comment)
+        reddit_actions_handler.write_removal_reason(url, rules, True)
+        reddit_actions_handler.write_usernote(url, actionable_comment.author.name, None, rules_str)
+        reddit_actions_handler.remove_comment("Mod removal request: mod", mod_comment)
+        reddit_actions_handler.remove_comment("Mod removal request: user", actionable_comment)
     elif split[0] == ".n":
         print(f"Usernoting: {actionable_comment.author.name} for {rules_str}: {actionable_comment.permalink}")
-        usernote_handler.write_usernote(url, actionable_comment.author.name, None, rules_str)
-        usernote_handler.remove_comment("Mod removal request: mod", mod_comment)
-        usernote_handler.remove_comment("Mod removal request: user", actionable_comment)
+        reddit_actions_handler.write_usernote(url, actionable_comment.author.name, None, rules_str)
+        reddit_actions_handler.remove_comment("Mod removal request: mod", mod_comment)
+        reddit_actions_handler.remove_comment("Mod removal request: user", actionable_comment)
 
 
 def get_id(fullname):
@@ -249,10 +249,10 @@ def get_id(fullname):
     return split[1] if len(split) > 0 else split[0]
 
 
-def find_rules(input):
-    if input is None or len(input) < 2:
+def find_rules(rule_input):
+    if rule_input is None or len(rule_input) < 2:
         return list()
-    rules = input[1]
+    rules = rule_input[1]
     for delim in [",", ".", ";"]:
         if delim in rules:
             return rules.split(delim)
@@ -261,9 +261,9 @@ def find_rules(input):
 
 class MyView(discord.ui.View):
 
-    def __init__(self, guild, usernote_handler, is_comment):
+    def __init__(self, guild, reddit_actions_handler, is_comment):
         super().__init__(timeout=300)
-        self.usernote_handler = usernote_handler
+        self.reddit_actions_handler = reddit_actions_handler
         self.guild = guild
         self.is_comment = is_comment
 
@@ -282,7 +282,7 @@ class MyView(discord.ui.View):
         url = self.get_field(fields, "URL")
 
         await interaction.response.send_modal(
-            UsernoteModal(self.usernote_handler, action_mod, url, target_user, self.is_comment))
+            UsernoteModal(self.reddit_actions_handler, action_mod, url, target_user, self.is_comment))
         await interaction.message.delete()
 
     @discord.ui.button(label="Remove this message", style=discord.ButtonStyle.red)
@@ -305,9 +305,9 @@ class MyView(discord.ui.View):
 class UsernoteModal(ui.Modal, title="Usernote Creation"):
     default_detail = "none (change to include anything in note beyond rule#)"
 
-    def __init__(self, usernote_handler, mod, url, target_user_default, is_comment):
+    def __init__(self, reddit_actions_handler, mod, url, target_user_default, is_comment):
         super().__init__(timeout=300)  # seconds
-        self.reddit_handler = usernote_handler
+        self.reddit_handler = reddit_actions_handler
         self.url = "https://www.reddit.com" + url
         self.mod = mod
         self.is_comment = is_comment

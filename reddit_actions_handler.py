@@ -24,7 +24,7 @@ for key, value in note_type_translation.items():
     mapdata = mapdata + "\n" + str(key) + ": " + str(value)
 
 
-class UsernoteHandler:
+class RedditActionsHandler:
     def __init__(self, reddit, subreddit):
         self.reddit = reddit
         self.subreddit = subreddit
