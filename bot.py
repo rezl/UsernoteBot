@@ -203,12 +203,13 @@ def run_forever():
                 client.send_error_msg(message)
                 print(message)
                 reddit_actions_handler.send_message(comment.author, "Error during removal request processing",
-                                              f"I've encountered an error whilst actioning your removal request:  \n\n"
-                                              f"URL: https://www.reddit.com{comment.permalink}  \n\n"
-                                              f"Error: {e}\n\n"
-                                              f"Please review your comment and the offending comment"
-                                              f" to ensure they are removed. If your command is in the correct format, "
-                                              f"e.g. \".r 1,2,3\", please raise this issue to the developers.")
+                                                    f"I've encountered an error whilst actioning your removal request:"
+                                                    f"  \n\n"
+                                                    f"URL: https://www.reddit.com{comment.permalink}  \n\n"
+                                                    f"Error: {e}\n\n"
+                                                    f"Please review your comment and the offending comment to ensure "
+                                                    f"they are removed. If your command is in the correct format, "
+                                                    f"e.g. \".r 1,2,3\", please raise this issue to the developers.")
 
 
 def handle_mod_response(mod_comment, reddit_actions_handler):
@@ -217,7 +218,7 @@ def handle_mod_response(mod_comment, reddit_actions_handler):
     if split[0] not in [".r", ".n"]:
         return
     rules = find_rules(split)
-    rules_str = "R" + str(rules)
+    rules_str = "R" + ",".join(rules)
     print(f"Action request: {mod_comment.author.name} for {rules_str}: {mod_comment.permalink}")
     actionable_comment = mod_comment.parent()
     url = f"https://www.reddit.com{actionable_comment.permalink}"
