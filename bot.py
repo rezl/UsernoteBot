@@ -1,5 +1,6 @@
 import traceback
 import typing
+from datetime import datetime, timedelta
 from threading import Thread
 import discord
 import os
@@ -95,6 +96,23 @@ def run_forever():
 
     collapse_guild = discord.utils.get(client.guilds, name=guild_collapse_name)
 
+    mods_last_check = datetime.utcfromtimestamp(0)
+    mods = None
+
+    def get_cached_mods():
+        nonlocal mods_last_check
+        nonlocal mods
+        if datetime.utcnow() - mods_last_check < timedelta(days=1):
+            return mods
+
+        mods = list()
+        for moderator in subreddit.moderator():
+            mods.append(moderator.name)
+        mods_last_check = datetime.utcnow()
+        mods = mods
+        print(f"Refreshed mods: {mods}")
+        return mods
+
     # anyone using the bot must be a mod in the collapse mod discord server
     # (even if using outside this server)
     def is_collapse_mod():
@@ -154,7 +172,7 @@ def run_forever():
                     embed.add_field(name="Target User", value=mod_action.target_author, inline=True)
                     embed.add_field(name="URL", value=mod_action.target_permalink, inline=False)
                     if is_comment:
-                        comment_truc = (mod_action.target_body[:300] + '...')\
+                        comment_truc = (mod_action.target_body[:300] + '...') \
                             if len(mod_action.target_body) > 300 else mod_action.target_body
                         embed.add_field(name="Comment Body", value=comment_truc, inline=False)
                     else:
@@ -165,18 +183,80 @@ def run_forever():
                     break
             # no actions found for a mod, so that probably means provided mod name doesn't exist
             if actions_count < num_retrieved_mod_removals:
-                message = f"I found no actions for {mod}. " \
-                          f"Please change your discord or server name, or contact developers"
-                print(message)
-                await ctx.send(message)
-        except Exception as e:
-            message = f"Exception in main processing: {e}\n```{traceback.format_exc()}```"
-            client.send_error_msg(message)
-            print(message)
+                user_response = f"I found no actions for {mod}. " \
+                                f"Please change your discord or server name, or contact developers"
+                print(user_response)
+                await ctx.send(user_response)
+        except Exception as ex:
+            error_msg = f"Exception in main processing: {ex}\n```{traceback.format_exc()}```"
+            client.send_error_msg(error_msg)
+            print(error_msg)
 
-    # required apparently some bug in python that ends the script if this thread stops, despite discord thread alive
-    while client.is_ready:
-        time.sleep(100000)
+    while True:
+        for comment in subreddit.stream.comments():
+            if comment.author not in get_cached_mods():
+                continue
+            try:
+                handle_mod_response(comment, usernote_handler)
+            except Exception as e:
+                message = f"Exception in comment processing: {e}\n```{traceback.format_exc()}```"
+                client.send_error_msg(message)
+                print(message)
+                usernote_handler.send_message(comment.author, "Error during removal request processing",
+                                              f"I've encountered an error whilst actioning your removal request:  \n\n"
+                                              f"URL: https://www.reddit.com{comment.permalink}  \n\n"
+                                              f"Error: {e}\n\n"
+                                              f"Please review your comment and the offending comment"
+                                              f" to ensure they are removed. If your command is in the correct format, "
+                                              f"e.g. \".r 1,2,3\", please raise this issue to the developers.")
+
+
+def handle_mod_response(mod_comment, usernote_handler):
+    split = mod_comment.body.split(" ")
+    # early check to prevent querying for parent etc if not even a command
+    if split[0] not in [".r", ".n"]:
+        return
+    rules = find_rules(split)
+    rules_str = "R" + str(rules)
+    print(f"Action request: {mod_comment.author.name} for {rules_str}: {mod_comment.permalink}")
+    actionable_comment = mod_comment.parent()
+    url = f"https://www.reddit.com{actionable_comment.permalink}"
+    notes = usernote_handler.toolbox.usernotes.list_notes(actionable_comment.author.name, reverse=True)
+    for note in notes:
+        if note.url is None:
+            continue
+        # already usernoted: a usernote already contains the link to this content
+        if actionable_comment.id in note.url:
+            print(f"Ignoring as already actioned {actionable_comment.id}:"
+                  f" {actionable_comment.author.name} for {rules_str}: {actionable_comment.permalink}")
+            return
+
+    if split[0] == ".r":
+        print(f"Removing+Usernoting: {actionable_comment.author.name} for {rules_str}: {actionable_comment.permalink}")
+        usernote_handler.write_removal_reason(url, rules, True)
+        usernote_handler.write_usernote(url, actionable_comment.author.name, None, rules_str)
+        usernote_handler.remove_comment("Mod removal request: mod", mod_comment)
+        usernote_handler.remove_comment("Mod removal request: user", actionable_comment)
+    elif split[0] == ".n":
+        print(f"Usernoting: {actionable_comment.author.name} for {rules_str}: {actionable_comment.permalink}")
+        usernote_handler.write_usernote(url, actionable_comment.author.name, None, rules_str)
+        usernote_handler.remove_comment("Mod removal request: mod", mod_comment)
+        usernote_handler.remove_comment("Mod removal request: user", actionable_comment)
+
+
+def get_id(fullname):
+    split = fullname.split("_")
+    return split[1] if len(split) > 0 else split[0]
+
+
+def find_rules(input):
+    if input is None or len(input) < 2:
+        return list()
+    rules = input[1]
+    for delim in [",", ".", ";"]:
+        if delim in rules:
+            return rules.split(delim)
+    return rules
 
 
 class MyView(discord.ui.View):
@@ -269,6 +349,12 @@ class UsernoteModal(ui.Modal, title="Usernote Creation"):
             await interaction.response.send_message(message, ephemeral=True)
             return
 
+        if int(rule) < 0 or int(rule) > 12:
+            message = f"Rule number must be a valid rule in r/collapse. Redo commands"
+            print(message)
+            await interaction.response.send_message(message, ephemeral=True)
+            return
+
         if not target_user:
             message = f"Target user must be included. \"{target_user}\" is not a valid user. Redo commands"
             print(message)
@@ -285,20 +371,20 @@ class UsernoteModal(ui.Modal, title="Usernote Creation"):
             await interaction.response.send_message(message, ephemeral=True)
             return
 
-        self.reddit_handler.write_usernote(self.url, target_user, note_type, full_note)
-        if should_comment:
-            try:
-                self.reddit_handler.write_removal_reason(self.url, int(rule), self.is_comment)
-            except Exception as e:
-                message = f"Error whilst posting comment. " \
-                          f"If your Rule # is valid and exists {rule}, please raise to devs. Redo commands\n{e}"
-                print(message)
-                await interaction.response.send_message(message, ephemeral=True)
-                return
-
-        message = f"Usernote{comment_addendum} created! {target_user}: {full_note}"
-        print(message)
+        message = f"Creating usernote{comment_addendum}! {target_user}: {full_note}"
         await interaction.response.send_message(message, ephemeral=True)
+        print(message)
+
+        try:
+            self.reddit_handler.write_usernote(self.url, target_user, note_type, full_note)
+            if should_comment:
+                rules = list()
+                rules.append(rule)
+                self.reddit_handler.write_removal_reason(self.url, rules, self.is_comment)
+        except Exception as e:
+            error_formatted = traceback.format_exc()
+            print(error_formatted)
+            return
 
     async def on_error(self, interaction: discord.Interaction, error: Exception):
         error_formatted = traceback.format_exc()
