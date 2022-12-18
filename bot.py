@@ -235,14 +235,13 @@ def handle_mod_response(mod_comment, reddit_actions_handler):
     if split[0] == ".r":
         print(f"Removing+Usernoting: {actionable_comment.author.name} for {rules_str}: {actionable_comment.permalink}")
         reddit_actions_handler.write_removal_reason(url, rules, True)
+        reddit_actions_handler.remove_comment("Mod removal request: user", actionable_comment)
         reddit_actions_handler.write_usernote(url, actionable_comment.author.name, None, rules_str)
         reddit_actions_handler.remove_comment("Mod removal request: mod", mod_comment)
-        reddit_actions_handler.remove_comment("Mod removal request: user", actionable_comment)
     elif split[0] == ".n":
         print(f"Usernoting: {actionable_comment.author.name} for {rules_str}: {actionable_comment.permalink}")
         reddit_actions_handler.write_usernote(url, actionable_comment.author.name, None, rules_str)
         reddit_actions_handler.remove_comment("Mod removal request: mod", mod_comment)
-        reddit_actions_handler.remove_comment("Mod removal request: user", actionable_comment)
 
 
 def get_id(fullname):
