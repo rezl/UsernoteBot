@@ -55,7 +55,7 @@ class RedditActionsHandler:
 
         reddit_rule_message = ""
         for rule in rules:
-            rule_detail = self.subreddit.rules[int(rule) - 1]
+            rule_detail = self.subreddit.rules[rule - 1]
             rule_message = f"Rule {rule_detail.priority + 1}: {rule_detail.short_name}\n\n" \
                            f"{rule_detail.description}\n\n"
             reddit_rule_message = reddit_rule_message + rule_message
@@ -87,4 +87,17 @@ class RedditActionsHandler:
             return
 
         user.message(subject, detail)
+        time.sleep(5)
+
+    def ban_user(self, user, external_detail, internal_detail, duration):
+        print(f"Banning {user} for {duration}, detail: {internal_detail}")
+        if Settings.is_dry_run:
+            print("\tDRY RUN!!!")
+            return
+
+        if duration.isnumeric():
+            self.subreddit.banned.add(user, ban_message=external_detail, ban_reason=internal_detail,
+                                      duration=int(duration))
+        else:
+            self.subreddit.banned.add(user, ban_message=external_detail, ban_reason=internal_detail)
         time.sleep(5)

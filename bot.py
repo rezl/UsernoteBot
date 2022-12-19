@@ -194,10 +194,11 @@ def run_forever():
 
     while True:
         for comment in subreddit.stream.comments():
+            # don't use is_mod (which is true if mod of ANY subs)
             if comment.author not in get_cached_mods():
                 continue
             try:
-                handle_mod_response(comment, reddit_actions_handler)
+                handle_mod_response(client, subreddit, comment, reddit_actions_handler)
             except Exception as e:
                 message = f"Exception in comment processing: {e}\n```{traceback.format_exc()}```"
                 client.send_error_msg(message)
@@ -207,41 +208,73 @@ def run_forever():
                                                     f"  \n\n"
                                                     f"URL: https://www.reddit.com{comment.permalink}  \n\n"
                                                     f"Error: {e}\n\n"
-                                                    f"Please review your comment and the offending comment to ensure "
-                                                    f"they are removed. If your command is in the correct format, "
+                                                    f"Please review your comment and the offending user to ensure all"
+                                                    f" is as expected. If your command is in the correct format, "
                                                     f"e.g. \".r 1,2,3\", please raise this issue to the developers.")
 
 
-def handle_mod_response(mod_comment, reddit_actions_handler):
-    split = mod_comment.body.split(" ")
+def handle_mod_response(discord_client, subreddit, mod_comment, reddit_actions_handler):
+    # input must be space separated
+    remaining_commands = mod_comment.body.split(" ")
+    command_type = remaining_commands[0]
     # early check to prevent querying for parent etc if not even a command
-    if split[0] not in [".r", ".n"]:
+    if command_type not in [".r", ".n"]:
         return
-    rules = find_rules(split)
-    rules_str = "R" + ",".join(rules)
-    print(f"Action request: {mod_comment.author.name} for {rules_str}: {mod_comment.permalink}")
+    # remaining_command always exists, so remove it
+    remaining_commands.remove(command_type)
+    print(f"Action request: {mod_comment.author.name}: {mod_comment.permalink}")
+
     actionable_comment = mod_comment.parent()
     url = f"https://www.reddit.com{actionable_comment.permalink}"
     notes = reddit_actions_handler.toolbox.usernotes.list_notes(actionable_comment.author.name, reverse=True)
+
     for note in notes:
         if note.url is None:
             continue
         # already usernoted: a usernote already contains the link to this content
         if actionable_comment.id in note.url:
             print(f"Ignoring as already actioned {actionable_comment.id}:"
-                  f" {actionable_comment.author.name} for {rules_str}: {actionable_comment.permalink}")
+                  f" {actionable_comment.author.name}: {actionable_comment.permalink}")
             return
 
-    if split[0] == ".r":
+    rules_int = find_rules(remaining_commands)
+    # if rules exist, remove it from the remaining commands
+    if rules_int and remaining_commands:
+        remaining_commands.remove(remaining_commands[0])
+
+    ban_type = find_ban(discord_client, subreddit, actionable_comment.author, remaining_commands)
+    # if ban command exists, remove it from the remaining commands
+    if ban_type and remaining_commands:
+        remaining_commands.remove(remaining_commands[0])
+
+    message = find_message(remaining_commands)
+
+    rules_str = ("R" + ",".join(str(x) for x in rules_int)) if len(rules_int) > 0 else "No cited rules"
+    full_note = rules_str + (": " + message if message else "")
+    if command_type == ".r":
         print(f"Removing+Usernoting: {actionable_comment.author.name} for {rules_str}: {actionable_comment.permalink}")
-        reddit_actions_handler.write_removal_reason(url, rules, True)
+        reddit_actions_handler.write_removal_reason(url, rules_int, True)
         reddit_actions_handler.remove_comment("Mod removal request: user", actionable_comment)
-        reddit_actions_handler.write_usernote(url, actionable_comment.author.name, None, rules_str)
+        reddit_actions_handler.write_usernote(url, actionable_comment.author.name, None, full_note)
         reddit_actions_handler.remove_comment("Mod removal request: mod", mod_comment)
-    elif split[0] == ".n":
+        internal_detail = f"Usernotes command by {mod_comment.author.name} for {full_note}"
+        if ban_type:
+            reddit_actions_handler.ban_user(actionable_comment.author.name, rules_str, internal_detail, ban_type)
+        ban_message = ("Ban:" + (ban_type if ban_type.isnumeric() else "Perm" + " " + internal_detail)
+                       if ban_type else "")
+        reddit_actions_handler.send_message(mod_comment.author, "Bot Action Summary",
+                                            f"I have performed the following:\n\n"
+                                            f"URL: https://www.reddit.com{actionable_comment.permalink}  \n\n"
+                                            f"Usernote detail: {full_note}\n\n"
+                                            f"{ban_message}")
+    elif command_type == ".n":
         print(f"Usernoting: {actionable_comment.author.name} for {rules_str}: {actionable_comment.permalink}")
-        reddit_actions_handler.write_usernote(url, actionable_comment.author.name, None, rules_str)
+        reddit_actions_handler.write_usernote(url, actionable_comment.author.name, None, full_note)
         reddit_actions_handler.remove_comment("Mod removal request: mod", mod_comment)
+        reddit_actions_handler.send_message(mod_comment.author, "Bot Action Summary",
+                                            f"I have performed the following:\n\n"
+                                            f"URL: https://www.reddit.com{actionable_comment.permalink}  \n\n"
+                                            f"Usernote detail: {full_note}\n\n")
 
 
 def get_id(fullname):
@@ -249,14 +282,66 @@ def get_id(fullname):
     return split[1] if len(split) > 0 else split[0]
 
 
-def find_rules(rule_input):
-    if rule_input is None or len(rule_input) < 2:
+# attempts to find rule set from input
+# if all input is a number, optionally delim sep, returns a list of these numbers
+# if it cannot, returns empty list (ie no rules included)
+def find_rules(command):
+    if not command:
         return list()
-    rules = rule_input[1]
+    # if rules included, it is always the 1st of rule_input
+    rules = command[0]
+    # case if the input is only 1 rule
+    if rules.isnumeric():
+        rules_int = list()
+        rules_int.append(int(rules))
+        return rules_int
     for delim in [",", ".", ";"]:
         if delim in rules:
-            return rules.split(delim)
-    return rules
+            rules_str = rules.split(delim)
+            rules_int = list()
+            for rule in rules_str:
+                if rule.isnumeric():
+                    rules_int.append(int(rule))
+                else:
+                    return list()
+            return rules_int
+    return list()
+
+
+# attempts to find ban type from input: num, i, p
+# if input is a ban request and matches the supported ban types, returns the type (number or perm)
+# otherwise returns empty string (not ban)
+def find_ban(discord_client, subreddit, user, command):
+    # ban command always starts with "b"
+    if not command or not command[0].startswith("b"):
+        return ""
+    ban_type = command[0][1:]
+    if ban_type.isnumeric():
+        return ban_type
+    # incremental ban
+    elif ban_type == "i":
+        for log in subreddit.mod.notes.redditors(user):
+            if log.action == "banuser" and len(log.details) > 0:
+                try:
+                    # hopefully ban detail is always in (# days) ...
+                    banned_days = int(log.detail.split(" ")[0])
+                    return str(banned_days * 2)
+                except Exception as e:
+                    error_formatted = traceback.format_exc()
+                    print(error_formatted)
+                    discord_client.send_error_msg(f"Caught exception in finding user ban:\n{error_formatted}")
+                    return ""
+        # if no notes, default to 3 days
+        return "3"
+    elif ban_type == "p":
+        return "perm"
+    return ""
+
+
+def find_message(command):
+    if not command:
+        return ""
+    return " ".join(command)
 
 
 class MyView(discord.ui.View):
@@ -307,7 +392,7 @@ class UsernoteModal(ui.Modal, title="Usernote Creation"):
 
     def __init__(self, reddit_actions_handler, mod, url, target_user_default, is_comment):
         super().__init__(timeout=300)  # seconds
-        self.reddit_handler = reddit_actions_handler
+        self.reddit_actions_handler = reddit_actions_handler
         self.url = "https://www.reddit.com" + url
         self.mod = mod
         self.is_comment = is_comment
@@ -376,11 +461,11 @@ class UsernoteModal(ui.Modal, title="Usernote Creation"):
         print(message)
 
         try:
-            self.reddit_handler.write_usernote(self.url, target_user, note_type, full_note)
+            self.reddit_actions_handler.write_usernote(self.url, target_user, note_type, full_note)
             if should_comment:
                 rules = list()
-                rules.append(rule)
-                self.reddit_handler.write_removal_reason(self.url, rules, self.is_comment)
+                rules.append(int(rule))
+                self.reddit_actions_handler.write_removal_reason(self.url, rules, self.is_comment)
         except Exception as e:
             error_formatted = traceback.format_exc()
             print(error_formatted)
