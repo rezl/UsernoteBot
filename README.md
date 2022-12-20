@@ -3,7 +3,65 @@ usernotebot enables writing usernotes or removal comments by [/r/collapse](https
 Prompt bot in discord (Collapse server or bot DM) with `.help` and `.help usernote`
 
 # Details
-## Workflow:
+## REDDIT Workflow:
+1. Comment on offending content with bot command
+   1. Note, bot will respond even if your comment is not distinguished
+2. Bot will action the command
+3. Bot will respond to you with a summary performed, or if there is an issue
+
+### Command Structure:
+1. Base command:
+   1. `.r` = remove
+      1. Removes the offending content
+      2. Optionally bans
+   2. `.n` = note 
+      1. Usernotes the content, but does not remove
+      2. DOES NOT BAN (if the content is bad enough for ban, it's bad enough to be `.r`'d) - if included in command, it is ignored
+2. Optional inclusions, MUST BE IN THIS ORDER (each one is optional)
+   1. Rule Set
+      1. Examples: `1` or `1,2,3` or `1;5;2` or `1.4`
+         1. Does NOT work: `1 2 3` or `1;2.3` 
+      2. The rules broken by this content (note, MUST be numbers separated by `,` `.` or `;`)
+         1. E.g. 1 = Rule 1, be respectful to others
+   2. Ban Command
+      1. All supported options:
+         1. numbers = ban length in days
+            1. E.g. `b1` `b4` `b10` `b31`
+         2. i for incremental = looks up the last ban length, and multiplies this by 2
+            1. E.g. `bi` on user with a prior 3d ban will ban them 6 days
+         3. p for permanent = permanently bans the user
+   3. Message 
+      1. Remaining part of command
+      2. This is included in the usernote
+   4. More details on the command structure:
+      1. It's designed to be as concise as possible to cater towards mobile modding
+      2. If you do not include a section, or improperly format it, the bot will look at the next optional part
+         1. I.e. if you say "bo" instead of "bi", the bot will NOT ban, but your message would include "bo" + message
+
+Command Structure Examples:
+* `.r 1,2 bi advocating for violence`
+  * Remove request, citing rules 1 + 2, incremental ban, with message
+  * Bot removes user content, with a removal message, citing rules 1 and 2
+  * Bot bans user for 2 days (assume last ban 1 day), citing rules 1 and 2
+  * Bot leaves a usernote "advocating for violence"
+* `.r b1 user needs a timeout for being mean`
+  * Remove request, citing no rules, 1 day ban, with message
+  * Bot removes user content, with a removal message (no cited rules, as not included)
+  * Bot bans user for 1 day, citing nothing (as no rules included)
+  * Bot leaves a usernote "user needs a timeout for being mean"
+* `.r 1.3,4 basdf really cool message`
+  * Remove request, citing no rules (incorrect format), no ban (incorrect format), message "1.3,4 basdf really cool message"
+  * Bot removes user content, removal messages (no cited rules)
+  * Bot doesn't ban
+  * Bot leaves a usernote "1.3,4 basdf really cool message"
+* `.r bi 1,2,3 message`
+  * Remove request, citing no rules (format), no ban (format), message "bi 1,2,3 message"
+  * This request would be correct, but is in the incorrect format to action
+  * Bot removes content, removal message (no cited rules), no ban
+  * Usernote = "bi 1,2,3 message"
+
+
+## DISCORD Workflow:
 1. Prompt bot in discord (Collapse server or bot DM), eg `.usernote`
 
 ![img.png](pictures/readme-usernote.png)
