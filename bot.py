@@ -324,13 +324,14 @@ def find_ban(discord_client, subreddit, user, command):
             if log.action == "banuser" and len(log.details) > 0:
                 try:
                     # hopefully ban detail is always in (# days) ...
-                    banned_days = int(log.detail.split(" ")[0])
+                    banned_days = int(log.details.split(" ")[0])
                     return str(banned_days * 2)
                 except Exception as e:
                     error_formatted = traceback.format_exc()
                     print(error_formatted)
-                    discord_client.send_error_msg(f"Caught exception in finding user ban:\n{error_formatted}")
-                    return ""
+                    discord_client.send_error_msg(f"Caught exception in finding user ban:\n{error_formatted} "
+                                                  f"when processing {user}: {command} with {log} {log.details}")
+                    return "3"
         # if no notes, default to 3 days
         return "3"
     elif ban_type == "p":
