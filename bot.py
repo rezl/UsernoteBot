@@ -35,16 +35,16 @@ def run_forever():
 
     try:
         for subreddit_name in subreddit_names:
-            create_usernotes_thread(bot_password, bot_username, discord_client, client_id, client_secret, subreddit_name)
-        while True:
-            time.sleep(10)
+            create_usernotes_thread(bot_password, bot_username, client_id, client_secret,
+                                    discord_client, subreddit_name)
     except Exception as e:
         message = f"Exception in main processing: {e}\n```{traceback.format_exc()}```"
         discord_client.send_error_msg(message)
         print(message)
 
 
-def create_usernotes_thread(bot_password, bot_username, client, client_id, client_secret, subreddit_name):
+def create_usernotes_thread(bot_password, bot_username, client_id, client_secret,
+                            discord_client, subreddit_name):
     print(f"Creating {subreddit_name} subreddit thread")
 
     # each thread needs its own read for thread safety
@@ -57,11 +57,11 @@ def create_usernotes_thread(bot_password, bot_username, client, client_id, clien
     )
     subreddit = reddit.subreddit(subreddit_name)
     subreddit_tracker = SubredditTracker(subreddit, RedditActionsHandler(reddit, subreddit))
-    Thread(target=handle_comment_stream, args=(client, subreddit_tracker)).start()
+    Thread(target=handle_comment_stream, args=(discord_client, subreddit_tracker)).start()
     print(f"Created {subreddit_name} subreddit thread")
 
 
-def handle_comment_stream(client, subreddit_tracker):
+def handle_comment_stream(discord_client, subreddit_tracker):
     subreddit = subreddit_tracker.subreddit
     reddit_actions_handler = subreddit_tracker.reddit_actions_handler
 
@@ -70,10 +70,10 @@ def handle_comment_stream(client, subreddit_tracker):
         if comment.author not in subreddit_tracker.get_cached_mods():
             continue
         try:
-            handle_mod_response(client, subreddit_tracker, comment)
+            handle_mod_response(discord_client, subreddit_tracker, comment)
         except Exception as e:
             message = f"Exception in comment processing: {e}\n```{traceback.format_exc()}```"
-            client.send_error_msg(message)
+            discord_client.send_error_msg(message)
             print(message)
             reddit_actions_handler.send_message(comment.author, "Error during removal request processing",
                                                 f"I've encountered an error whilst actioning your removal request:"
