@@ -2,6 +2,7 @@ import traceback
 from threading import Thread
 import os
 
+from praw.exceptions import RedditAPIException
 from praw.reddit import Submission
 
 import config
@@ -11,6 +12,9 @@ import praw
 from discord_client import DiscordClient
 from reddit_actions_handler import RedditActionsHandler
 from subreddit_tracker import SubredditTracker
+
+max_retries = 5
+retry_wait_time = 30
 
 
 def run_forever():
@@ -66,23 +70,39 @@ def handle_comment_stream(discord_client, subreddit_tracker):
     reddit_actions_handler = subreddit_tracker.reddit_actions_handler
 
     for comment in subreddit.stream.comments():
-        # don't use is_mod (which is true if mod of ANY subs)
         if comment.author not in subreddit_tracker.get_cached_mods():
             continue
-        try:
-            handle_mod_response(discord_client, subreddit_tracker, comment)
-        except Exception as e:
-            message = f"Exception in comment processing: {e}\n```{traceback.format_exc()}```"
-            discord_client.send_error_msg(message)
-            print(message)
-            reddit_actions_handler.send_message(comment.author, "Error during removal request processing",
-                                                f"I've encountered an error whilst actioning your removal request:"
-                                                f"  \n\n"
-                                                f"URL: https://www.reddit.com{comment.permalink}  \n\n"
-                                                f"Error: {e}\n\n"
-                                                f"Please review your comment and the offending user to ensure all"
-                                                f" is as expected. If your command is in the correct format, "
-                                                f"e.g. \".r 1,2,3\", please raise this issue to the developers.")
+        for i in range(max_retries):
+            try:
+                handle_mod_response(discord_client, subreddit_tracker, comment)
+            except RedditAPIException as e:
+                message = f"API Exception in comment processing: {e}\n```{traceback.format_exc()}```\n\n" \
+                          f"Retrying in {retry_wait_time} seconds..."
+                discord_client.send_error_msg(message)
+                print(message)
+                if i == max_retries:
+                    reddit_actions_handler.send_message(comment.author, "Error during removal request processing",
+                                                        f"I've encountered an error whilst actioning your request:"
+                                                        f"  \n\n"
+                                                        f"URL: https://www.reddit.com{comment.permalink}  \n\n"
+                                                        f"Error: {e}\n\n"
+                                                        f"Please review to ensure all"
+                                                        f" is as expected. If your command is in the correct format, "
+                                                        f"e.g. \".r 1,2,3\", please raise this issue to the developers")
+                else:
+                    time.sleep(retry_wait_time)
+            except Exception as e:
+                message = f"Exception in comment processing: {e}\n```{traceback.format_exc()}```"
+                discord_client.send_error_msg(message)
+                print(message)
+                reddit_actions_handler.send_message(comment.author, "Error during removal request processing",
+                                                    f"I've encountered an error whilst actioning your request:"
+                                                    f"  \n\n"
+                                                    f"URL: https://www.reddit.com{comment.permalink}  \n\n"
+                                                    f"Error: {e}\n\n"
+                                                    f"Please review to ensure all"
+                                                    f" is as expected. If your command is in the correct format, "
+                                                    f"e.g. \".r 1,2,3\", please raise this issue to the developers")
 
 
 def handle_mod_response(discord_client, subreddit_tracker, mod_comment):
