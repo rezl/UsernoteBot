@@ -112,12 +112,12 @@ def handle_mod_response(discord_client, subreddit_tracker, mod_comment):
     # input must be space separated
     remaining_commands = mod_comment.body.split(" ")
     command_type = remaining_commands[0]
-    # early check to prevent querying for parent etc if not even a command
-    if command_type not in [".r", ".n"]:
+    if command_type not in [".r", ".n", ".u"]:
         return
     # remaining_command always exists, so remove it
     remaining_commands.remove(command_type)
-    print(f"Action request {subreddit.display_name} {mod_comment.author.name}: {mod_comment.permalink}")
+    action_request = f"Action request {subreddit.display_name} {mod_comment.author.name}: {mod_comment.permalink}"
+    print(action_request)
 
     actionable_content = mod_comment.parent()
     is_submission = type(actionable_content) is Submission
@@ -144,6 +144,7 @@ def handle_mod_response(discord_client, subreddit_tracker, mod_comment):
         remaining_commands.remove(remaining_commands[0])
     # if mod can't ban, overwrite to empty
     if mod_comment.author.name not in subreddit_tracker.ban_mods:
+        discord_client.send_error_msg(f"Detected ban attempt from a mod without ban permissions:\n\n{action_request}")
         ban_type = ""
 
     message = find_message(remaining_commands)
@@ -166,7 +167,7 @@ def handle_mod_response(discord_client, subreddit_tracker, mod_comment):
                                             f"URL: https://www.reddit.com{actionable_content.permalink}  \n\n"
                                             f"Usernote detail: {full_note}\n\n"
                                             f"{ban_message}")
-    elif command_type == ".n":
+    elif command_type in [".n", ".u"]:
         print(f"Usernoting: {actionable_content.author.name} for {rules_str}: {actionable_content.permalink}")
         reddit_actions_handler.write_usernote(url, actionable_content.author.name, None, full_note)
         reddit_actions_handler.remove_content("Mod removal request: mod", mod_comment)
