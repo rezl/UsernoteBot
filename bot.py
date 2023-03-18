@@ -1,4 +1,3 @@
-import threading
 import traceback
 import typing
 from threading import Thread
@@ -57,25 +56,26 @@ def run_forever():
             await ctx.channel.send(f"I am now NOT running in dry run mode")
 
     try:
-        # reddit + toolbox stuff
-        reddit = praw.Reddit(
-            client_id=client_id, client_secret=client_secret,
-            user_agent="flyio:com.collapse.usernotebot",
-            redirect_uri="http://localhost:8080",  # unused for script applications
-            username=bot_username, password=bot_password,
-            check_for_async=False
-        )
-
-        lock = threading.Lock()
         subreddits = list()
         for subreddit_name in subreddit_names:
-            subreddit = reddit.subreddit(subreddit_name)
-            subreddit_tracker = SubredditTracker(subreddit, RedditActionsHandler(reddit, subreddit, lock))
-            subreddits.append(subreddit_tracker)
-            Thread(target=handle_comment_stream, args=(client, subreddit_tracker)).start()
-            print(f"Created {subreddit_name} subreddit thread")
-            time.sleep(5)
+            print(f"Creating {subreddit_name} subreddit thread")
 
+            # each thread needs its own read for thread safety
+            reddit = praw.Reddit(
+                client_id=client_id, client_secret=client_secret,
+                user_agent=f"flyio:com.usernotebot.{subreddit_name}",
+                redirect_uri="http://localhost:8080",  # unused for script applications
+                username=bot_username, password=bot_password,
+                check_for_async=False
+            )
+
+            subreddit = reddit.subreddit(subreddit_name)
+            subreddit_tracker = SubredditTracker(subreddit, RedditActionsHandler(reddit, subreddit))
+            subreddits.append(subreddit_tracker)
+
+            Thread(target=handle_comment_stream, args=(client, subreddit_tracker)).start()
+
+            print(f"Created {subreddit_name} subreddit thread")
         while True:
             time.sleep(10)
     except Exception as e:

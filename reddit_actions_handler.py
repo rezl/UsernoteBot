@@ -25,16 +25,14 @@ for key, value in note_type_translation.items():
 
 
 class RedditActionsHandler:
-    def __init__(self, reddit, subreddit, lock):
+    def __init__(self, reddit, subreddit):
         self.reddit = reddit
         self.subreddit = subreddit
         self.toolbox = pmtw.Toolbox(
             subreddit
         )
-        self.lock = lock
 
     def write_usernote(self, url, user, note_type, detail):
-        self.lock.acquire()
         print(f"Writing usernote for {str(user)}: {detail}")
         if Settings.is_dry_run:
             print("\tDRY RUN!!!")
@@ -44,10 +42,8 @@ class RedditActionsHandler:
         note = ToolboxNote(redditor, detail, warning=note_type, url=url)
         self.toolbox.usernotes.add(note)
         time.sleep(5)
-        self.lock.release()
 
     def write_removal_reason(self, url, rules, is_comment):
-        self.lock.acquire()
         print(f"Writing removal comment for {str(url)}: {str(rules)}")
         if Settings.is_dry_run:
             print("\tDRY RUN!!!")
@@ -72,10 +68,8 @@ class RedditActionsHandler:
         comment.mod.distinguish(sticky=True)
         comment.mod.lock()
         time.sleep(5)
-        self.lock.release()
 
     def remove_content(self, removal_reason, content):
-        self.lock.acquire()
         print(f"Removing content, reason: {removal_reason}")
         if Settings.is_dry_run:
             print("\tDRY RUN!!!")
@@ -83,10 +77,8 @@ class RedditActionsHandler:
 
         content.mod.remove(mod_note=removal_reason)
         time.sleep(5)
-        self.lock.release()
 
     def send_message(self, user, subject, detail):
-        self.lock.acquire()
         print(f"Send message to {user}, detail: {detail}")
         if Settings.is_dry_run:
             print("\tDRY RUN!!!")
@@ -94,10 +86,8 @@ class RedditActionsHandler:
 
         user.message(subject, detail)
         time.sleep(5)
-        self.lock.release()
 
     def ban_user(self, user, external_detail, internal_detail, duration):
-        self.lock.acquire()
         print(f"Banning {user} for {duration}, detail: {internal_detail}")
         if Settings.is_dry_run:
             print("\tDRY RUN!!!")
@@ -109,4 +99,3 @@ class RedditActionsHandler:
         else:
             self.subreddit.banned.add(user, ban_message=external_detail, ban_reason=internal_detail)
         time.sleep(5)
-        self.lock.release()
