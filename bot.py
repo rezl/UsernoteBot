@@ -1,5 +1,4 @@
 import traceback
-import typing
 from threading import Thread
 import os
 
@@ -9,7 +8,6 @@ import config
 import time
 import praw
 
-import settings
 from discord_client import DiscordClient
 from reddit_actions_handler import RedditActionsHandler
 from subreddit_tracker import SubredditTracker
@@ -30,30 +28,11 @@ def run_forever():
 
     # discord stuff
     client = DiscordClient(guild_error_name, guild_error_channel)
+    client.add_commands()
     Thread(target=client.run, args=(discord_token,)).start()
 
     while not client.is_ready:
         time.sleep(1)
-
-    @client.command(name="ping", description="lol")
-    async def ping(ctx):
-        dry_run = "I'm currently running in Dry Run mode" if settings.Settings.is_dry_run else ""
-        await ctx.channel.send(dry_run)
-
-    @client.command(name="set_dry_run", brief="Set whether bot can make permanent reddit actions (0/1)",
-                    description="Change whether this bot can make reddit actions (usernotes, comments). "
-                                "When in dry_run, the bot will not make usernotes or reddit comments, "
-                                "however the full workflow otherwise is available on discord\n"
-                                "Include: \n"
-                                "  * 0 (not in dry run, makes actions)\n"
-                                "  * 1 (dry run, no reddit actions)",
-                    usage=".set_dry_run 1")
-    async def set_dry_run(ctx, dry_run: typing.Literal[0, 1] = 1):
-        settings.Settings.is_dry_run = dry_run
-        if settings.Settings.is_dry_run:
-            await ctx.channel.send(f"I am now running in dry run mode")
-        else:
-            await ctx.channel.send(f"I am now NOT running in dry run mode")
 
     try:
         subreddits = list()
