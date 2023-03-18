@@ -20,47 +20,45 @@ def run_forever():
     bot_username = os.environ.get("BOT_USERNAME", config.BOT_USERNAME)
     bot_password = os.environ.get("BOT_PASSWORD", config.BOT_PASSWORD)
     discord_token = os.environ.get("DISCORD_TOKEN", config.DISCORD_TOKEN)
-    guild_error_name = os.environ.get("DISCORD_ERROR_GUILD", config.DISCORD_ERROR_GUILD)
-    guild_error_channel = os.environ.get("DISCORD_ERROR_CHANNEL", config.DISCORD_ERROR_CHANNEL)
+    discord_error_guild_name = os.environ.get("DISCORD_ERROR_GUILD", config.DISCORD_ERROR_GUILD)
+    discord_error_channel_name = os.environ.get("DISCORD_ERROR_CHANNEL", config.DISCORD_ERROR_CHANNEL)
     subreddits_config = os.environ.get("SUBREDDITS", config.SUBREDDITS)
     subreddit_names = [subreddit.strip() for subreddit in subreddits_config.split(",")]
     print("CONFIG: subreddit_names=" + str(subreddit_names))
 
     # discord stuff
-    client = DiscordClient(guild_error_name, guild_error_channel)
-    client.add_commands()
-    Thread(target=client.run, args=(discord_token,)).start()
-
-    while not client.is_ready:
+    discord_client = DiscordClient(discord_error_guild_name, discord_error_channel_name)
+    discord_client.add_commands()
+    Thread(target=discord_client.run, args=(discord_token,)).start()
+    while not discord_client.is_ready:
         time.sleep(1)
 
     try:
-        subreddits = list()
         for subreddit_name in subreddit_names:
-            print(f"Creating {subreddit_name} subreddit thread")
-
-            # each thread needs its own read for thread safety
-            reddit = praw.Reddit(
-                client_id=client_id, client_secret=client_secret,
-                user_agent=f"flyio:com.usernotebot.{subreddit_name}",
-                redirect_uri="http://localhost:8080",  # unused for script applications
-                username=bot_username, password=bot_password,
-                check_for_async=False
-            )
-
-            subreddit = reddit.subreddit(subreddit_name)
-            subreddit_tracker = SubredditTracker(subreddit, RedditActionsHandler(reddit, subreddit))
-            subreddits.append(subreddit_tracker)
-
-            Thread(target=handle_comment_stream, args=(client, subreddit_tracker)).start()
-
-            print(f"Created {subreddit_name} subreddit thread")
+            create_usernotes_thread(bot_password, bot_username, discord_client, client_id, client_secret, subreddit_name)
         while True:
             time.sleep(10)
     except Exception as e:
         message = f"Exception in main processing: {e}\n```{traceback.format_exc()}```"
-        client.send_error_msg(message)
+        discord_client.send_error_msg(message)
         print(message)
+
+
+def create_usernotes_thread(bot_password, bot_username, client, client_id, client_secret, subreddit_name):
+    print(f"Creating {subreddit_name} subreddit thread")
+
+    # each thread needs its own read for thread safety
+    reddit = praw.Reddit(
+        client_id=client_id, client_secret=client_secret,
+        user_agent=f"flyio:com.usernotebot.{subreddit_name}",
+        redirect_uri="http://localhost:8080",  # unused for script applications
+        username=bot_username, password=bot_password,
+        check_for_async=False
+    )
+    subreddit = reddit.subreddit(subreddit_name)
+    subreddit_tracker = SubredditTracker(subreddit, RedditActionsHandler(reddit, subreddit))
+    Thread(target=handle_comment_stream, args=(client, subreddit_tracker)).start()
+    print(f"Created {subreddit_name} subreddit thread")
 
 
 def handle_comment_stream(client, subreddit_tracker):
