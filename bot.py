@@ -56,27 +56,32 @@ def run_forever():
         else:
             await ctx.channel.send(f"I am now NOT running in dry run mode")
 
-    # reddit + toolbox stuff
-    reddit = praw.Reddit(
-        client_id=client_id, client_secret=client_secret,
-        user_agent="flyio:com.collapse.usernotebot",
-        redirect_uri="http://localhost:8080",  # unused for script applications
-        username=bot_username, password=bot_password,
-        check_for_async=False
-    )
+    try:
+        # reddit + toolbox stuff
+        reddit = praw.Reddit(
+            client_id=client_id, client_secret=client_secret,
+            user_agent="flyio:com.collapse.usernotebot",
+            redirect_uri="http://localhost:8080",  # unused for script applications
+            username=bot_username, password=bot_password,
+            check_for_async=False
+        )
 
-    lock = threading.Lock()
-    subreddits = list()
-    for subreddit_name in subreddit_names:
-        subreddit = reddit.subreddit(subreddit_name)
-        subreddit_tracker = SubredditTracker(subreddit, RedditActionsHandler(reddit, subreddit, lock))
-        subreddits.append(subreddit_tracker)
-        Thread(target=handle_comment_stream, args=(client, subreddit_tracker)).start()
-        print(f"Created {subreddit_name} subreddit thread")
-        time.sleep(5)
+        lock = threading.Lock()
+        subreddits = list()
+        for subreddit_name in subreddit_names:
+            subreddit = reddit.subreddit(subreddit_name)
+            subreddit_tracker = SubredditTracker(subreddit, RedditActionsHandler(reddit, subreddit, lock))
+            subreddits.append(subreddit_tracker)
+            Thread(target=handle_comment_stream, args=(client, subreddit_tracker)).start()
+            print(f"Created {subreddit_name} subreddit thread")
+            time.sleep(5)
 
-    while True:
-        time.sleep(10)
+        while True:
+            time.sleep(10)
+    except Exception as e:
+        message = f"Exception in main processing: {e}\n```{traceback.format_exc()}```"
+        client.send_error_msg(message)
+        print(message)
 
 
 def handle_comment_stream(client, subreddit_tracker):
