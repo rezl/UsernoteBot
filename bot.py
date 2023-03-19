@@ -14,7 +14,7 @@ from reddit_actions_handler import RedditActionsHandler
 from subreddit_tracker import SubredditTracker
 
 max_retries = 5
-retry_wait_time = 30
+retry_wait_time_secs = 30
 
 
 def run_forever():
@@ -79,12 +79,13 @@ def handle_comment_stream(discord_client, subreddit_tracker):
         for i in range(max_retries):
             try:
                 handle_mod_response(discord_client, subreddit_tracker, comment)
+                break
             except RedditAPIException as e:
                 message = f"API Exception in comment processing: {e}\n```{traceback.format_exc()}```\n\n" \
-                          f"Retrying in {retry_wait_time} seconds..."
+                          f"Retrying in {retry_wait_time_secs} seconds..."
                 discord_client.send_error_msg(message)
                 print(message)
-                if i == max_retries:
+                if i == max_retries - 1:
                     reddit_actions_handler.send_message(comment.author, "Error during removal request processing",
                                                         f"I've encountered an error whilst actioning your request:"
                                                         f"  \n\n"
@@ -94,7 +95,7 @@ def handle_comment_stream(discord_client, subreddit_tracker):
                                                         f" is as expected. If your command is in the correct format, "
                                                         f"e.g. \".r 1,2,3\", please raise this issue to the developers")
                 else:
-                    time.sleep(retry_wait_time)
+                    time.sleep(retry_wait_time_secs)
             except Exception as e:
                 message = f"Exception in comment processing: {e}\n```{traceback.format_exc()}```"
                 discord_client.send_error_msg(message)
