@@ -1,13 +1,14 @@
 # Overview
-usernotebot enables writing usernotes or removal comments by [/r/collapse](https://www.reddit.com/r/collapse) moderators via discord or reddit. This is targeted at creating a better mobile modding experience
-Prompt bot in discord (Collapse server or bot DM) with `.help` and `.help usernote`
+usernotebot is a tool that enables moderators to write usernotes or removal comments. This tool is designed to improve the mobile modding experience, where Toolbox is not available. 
+
+The bot actions mod prompts (via comment) with below workflow
 
 # Details
 ## REDDIT Workflow:
 1. Comment on offending content with bot command
-   1. Note, bot will respond even if your comment is not distinguished
-2. Bot will action the command
-3. Bot will respond to you with a summary performed, or if there is an issue
+   1. Note, the bot will respond even if your comment is not distinguished
+2. The bot will action the command
+3. The bot will respond to you with a summary performed, or if there is an issue
 
 ### Command Structure:
 1. Base command:
@@ -15,12 +16,11 @@ Prompt bot in discord (Collapse server or bot DM) with `.help` and `.help userno
       1. Removes the offending content
       2. Optionally bans
    2. `.n` = note 
-      1. Usernotes the content, but does not remove
+      1. Usernotes the content but does not remove it
       2. DOES NOT BAN (if the content is bad enough for ban, it's bad enough to be `.r`'d) - if included in command, it is ignored
 2. Optional inclusions, MUST BE IN THIS ORDER (each one is optional)
    1. Rule Set
       1. Examples: `1` or `1,2,3` or `1;5;2` or `1.4`
-         1. Does NOT work: `1 2 3` or `1;2.3` 
       2. The rules broken by this content (note, MUST be numbers separated by `,` `.` or `;`)
          1. E.g. 1 = Rule 1, be respectful to others
    2. Ban Command
@@ -31,12 +31,12 @@ Prompt bot in discord (Collapse server or bot DM) with `.help` and `.help userno
             1. E.g. `bi` on user with a prior 3d ban will ban them 6 days
          3. **p for permanent** = permanently bans the user
    3. Message 
-      1. Remaining part of command
+      1. The remaining part of the command
       2. This is included in the usernote
-   4. More details on the command structure:
+   4. Additional details on the command structure:
       1. It's designed to be as concise as possible to cater towards mobile modding
       2. If you do not include a section, or improperly format it, the bot will look at the next optional part
-         1. I.e. if you say "bo" instead of "bi", the bot will NOT ban, but your message would include "bo" + message
+         1. For example, if you say "bo" instead of "bi", the bot will NOT ban, but your message would include "bo" + message
 
 Command Structure Examples:
 * `.r 1`
