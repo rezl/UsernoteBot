@@ -12,6 +12,7 @@ import praw
 from discord_client import DiscordClient
 from reddit_actions_handler import RedditActionsHandler
 from subreddit_tracker import SubredditTracker
+from resilient_thread import ResilientThread
 
 max_retries = 5
 retry_wait_time_secs = 30
@@ -65,7 +66,9 @@ def create_usernotes_thread(bot_password, bot_username, client_id, client_secret
     )
     subreddit = reddit.subreddit(subreddit_name)
     subreddit_tracker = SubredditTracker(subreddit, RedditActionsHandler(reddit, subreddit))
-    Thread(target=handle_comment_stream, args=(discord_client, subreddit_tracker)).start()
+    thread = ResilientThread(discord_client, f"{subreddit_name}-Usernotes",
+                             target=handle_comment_stream, args=(discord_client, subreddit_tracker))
+    thread.start()
     print(f"Created {subreddit_name} subreddit thread")
 
 
@@ -108,6 +111,7 @@ def handle_comment_stream(discord_client, subreddit_tracker):
                                                     f"Please review to ensure all"
                                                     f" is as expected. If your command is in the correct format, "
                                                     f"e.g. \".r 1,2,3\", please raise this issue to the developers")
+                break
 
 
 def handle_mod_response(discord_client, subreddit_tracker, mod_comment):
