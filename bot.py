@@ -64,16 +64,16 @@ def create_usernotes_thread(bot_password, bot_username, client_id, client_secret
         check_for_async=False
     )
     subreddit = reddit.subreddit(subreddit_name)
-    subreddit_tracker = SubredditTracker(subreddit, RedditActionsHandler(reddit, subreddit, discord_client))
+    subreddit_tracker = SubredditTracker(subreddit)
+    reddit_handler = RedditActionsHandler(reddit, subreddit, discord_client)
     thread = ResilientThread(discord_client, f"{subreddit_name}-Usernotes",
-                             target=handle_comment_stream, args=(discord_client, subreddit_tracker))
+                             target=handle_comment_stream, args=(discord_client, subreddit_tracker, reddit_handler))
     thread.start()
     print(f"Created {subreddit_name} subreddit thread")
 
 
-def handle_comment_stream(discord_client, subreddit_tracker):
+def handle_comment_stream(discord_client, subreddit_tracker, reddit_handler):
     subreddit = subreddit_tracker.subreddit
-    reddit_actions_handler = subreddit_tracker.reddit_actions_handler
 
     for comment in subreddit.stream.comments():
         if comment.author not in subreddit_tracker.get_cached_mods():
@@ -88,7 +88,7 @@ def handle_comment_stream(discord_client, subreddit_tracker):
                 discord_client.send_error_msg(message)
                 print(message)
                 if i == max_retries - 1:
-                    reddit_actions_handler.send_message(comment.author, "Error during removal request processing",
+                    reddit_handler.send_message(comment.author, "Error during removal request processing",
                                                         f"I've encountered an error whilst actioning your request:"
                                                         f"  \n\n"
                                                         f"URL: https://www.reddit.com{comment.permalink}  \n\n"
@@ -102,7 +102,7 @@ def handle_comment_stream(discord_client, subreddit_tracker):
                 message = f"Exception in comment processing: {e}\n```{traceback.format_exc()}```"
                 discord_client.send_error_msg(message)
                 print(message)
-                reddit_actions_handler.send_message(comment.author, "Error during removal request processing",
+                reddit_handler.send_message(comment.author, "Error during removal request processing",
                                                     f"I've encountered an error whilst actioning your request:"
                                                     f"  \n\n"
                                                     f"URL: https://www.reddit.com{comment.permalink}  \n\n"

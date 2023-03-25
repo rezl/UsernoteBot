@@ -2,9 +2,8 @@ from datetime import timedelta, datetime
 
 
 class SubredditTracker:
-    def __init__(self, subreddit, reddit_actions_handler):
+    def __init__(self, subreddit):
         self.subreddit = subreddit
-        self.reddit_actions_handler = reddit_actions_handler
 
         self.mods_last_check = datetime.utcfromtimestamp(0)
         self.removal_mods = list()
