@@ -65,7 +65,7 @@ def create_usernotes_thread(bot_password, bot_username, client_id, client_secret
         check_for_async=False
     )
     subreddit = reddit.subreddit(subreddit_name)
-    subreddit_tracker = SubredditTracker(subreddit, RedditActionsHandler(reddit, subreddit))
+    subreddit_tracker = SubredditTracker(subreddit, RedditActionsHandler(reddit, subreddit, discord_client))
     thread = ResilientThread(discord_client, f"{subreddit_name}-Usernotes",
                              target=handle_comment_stream, args=(discord_client, subreddit_tracker))
     thread.start()
