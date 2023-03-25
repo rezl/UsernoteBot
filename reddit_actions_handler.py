@@ -4,7 +4,6 @@ import traceback
 import pmtw
 from pmtw import ToolboxNote
 from praw.exceptions import RedditAPIException
-from praw.models import Comment, Submission
 
 from settings import Settings
 
@@ -29,11 +28,8 @@ class RedditActionsHandler:
         note = ToolboxNote(redditor, detail, warning=note_type, url=url)
         self.reddit_call(lambda: self.toolbox.usernotes.add(note))
 
-    def write_removal_reason(self, url, rules, is_comment):
-        print(f"Writing removal comment for {str(url)}: {str(rules)}")
-
-        content = self.reddit.comment(Comment.id_from_url(url)) \
-            if is_comment else self.reddit.submission(Submission.id_from_url(url))
+    def write_removal_reason(self, content, rules):
+        print(f"Writing removal comment for {str(content)}: {str(rules)}")
 
         reddit_rule_message = ""
         for rule in rules:

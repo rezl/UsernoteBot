@@ -3,7 +3,6 @@ from threading import Thread
 import os
 
 from praw.exceptions import RedditAPIException
-from praw.reddit import Submission
 
 import config
 import time
@@ -129,7 +128,6 @@ def handle_mod_response(discord_client, subreddit_tracker, mod_comment):
     print(action_request)
 
     actionable_content = mod_comment.parent()
-    is_submission = type(actionable_content) is Submission
     url = f"https://www.reddit.com{actionable_content.permalink}"
     notes = reddit_actions_handler.toolbox.usernotes.list_notes(actionable_content.author.name, reverse=True)
 
@@ -162,7 +160,7 @@ def handle_mod_response(discord_client, subreddit_tracker, mod_comment):
     full_note = rules_str + (": " + message if message else "")
     if command_type == ".r":
         print(f"Removing+Usernoting: {actionable_content.author.name} for {rules_str}: {actionable_content.permalink}")
-        reddit_actions_handler.write_removal_reason(url, rules_int, not is_submission)
+        reddit_actions_handler.write_removal_reason(actionable_content, rules_int)
         reddit_actions_handler.remove_content("Mod removal request: mod", mod_comment)
         reddit_actions_handler.remove_content("Mod removal request: user", actionable_content)
         reddit_actions_handler.write_usernote(url, actionable_content.author.name, None, full_note)
