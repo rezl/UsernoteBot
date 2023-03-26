@@ -80,7 +80,7 @@ def handle_comment_stream(discord_client, subreddit_tracker, reddit_handler):
             continue
         for i in range(max_retries):
             try:
-                handle_mod_response(discord_client, subreddit_tracker, comment)
+                handle_mod_response(discord_client, subreddit_tracker, reddit_handler, comment)
                 break
             except RedditAPIException as e:
                 message = f"API Exception in comment processing: {e}\n```{traceback.format_exc()}```\n\n" \
@@ -113,8 +113,7 @@ def handle_comment_stream(discord_client, subreddit_tracker, reddit_handler):
                 break
 
 
-def handle_mod_response(discord_client, subreddit_tracker, mod_comment):
-    reddit_actions_handler = subreddit_tracker.reddit_actions_handler
+def handle_mod_response(discord_client, subreddit_tracker, reddit_handler, mod_comment):
     subreddit = subreddit_tracker.subreddit
 
     # input must be space separated
@@ -129,7 +128,7 @@ def handle_mod_response(discord_client, subreddit_tracker, mod_comment):
 
     actionable_content = mod_comment.parent()
     url = f"https://www.reddit.com{actionable_content.permalink}"
-    notes = reddit_actions_handler.toolbox.usernotes.list_notes(actionable_content.author.name, reverse=True)
+    notes = reddit_handler.toolbox.usernotes.list_notes(actionable_content.author.name, reverse=True)
 
     for note in notes:
         if note.url is None:
@@ -160,25 +159,25 @@ def handle_mod_response(discord_client, subreddit_tracker, mod_comment):
     full_note = rules_str + (": " + message if message else "")
     if command_type == ".r":
         print(f"Removing+Usernoting: {actionable_content.author.name} for {rules_str}: {actionable_content.permalink}")
-        reddit_actions_handler.write_removal_reason(actionable_content, rules_int)
-        reddit_actions_handler.remove_content("Mod removal request: mod", mod_comment)
-        reddit_actions_handler.remove_content("Mod removal request: user", actionable_content)
-        reddit_actions_handler.write_usernote(url, actionable_content.author.name, None, full_note)
+        reddit_handler.write_removal_reason(actionable_content, rules_int)
+        reddit_handler.remove_content("Mod removal request: mod", mod_comment)
+        reddit_handler.remove_content("Mod removal request: user", actionable_content)
+        reddit_handler.write_usernote(url, actionable_content.author.name, None, full_note)
         internal_detail = f"Usernotes command by {mod_comment.author.name} for {full_note}"
         if ban_type:
-            reddit_actions_handler.ban_user(actionable_content.author.name, rules_str, internal_detail, ban_type)
+            reddit_handler.ban_user(actionable_content.author.name, rules_str, internal_detail, ban_type)
         ban_message = ("Ban:" + (ban_type if ban_type.isnumeric() else "Perm" + " " + internal_detail)
                        if ban_type else "")
-        reddit_actions_handler.send_message(mod_comment.author, "Bot Action Summary",
+        reddit_handler.send_message(mod_comment.author, "Bot Action Summary",
                                             f"I have performed the following:\n\n"
                                             f"URL: https://www.reddit.com{actionable_content.permalink}  \n\n"
                                             f"Usernote detail: {full_note}\n\n"
                                             f"{ban_message}")
     elif command_type in [".n", ".u"]:
         print(f"Usernoting: {actionable_content.author.name} for {rules_str}: {actionable_content.permalink}")
-        reddit_actions_handler.write_usernote(url, actionable_content.author.name, None, full_note)
-        reddit_actions_handler.remove_content("Mod removal request: mod", mod_comment)
-        reddit_actions_handler.send_message(mod_comment.author, "Bot Action Summary",
+        reddit_handler.write_usernote(url, actionable_content.author.name, None, full_note)
+        reddit_handler.remove_content("Mod removal request: mod", mod_comment)
+        reddit_handler.send_message(mod_comment.author, "Bot Action Summary",
                                             f"I have performed the following:\n\n"
                                             f"URL: https://www.reddit.com{actionable_content.permalink}  \n\n"
                                             f"Usernote detail: {full_note}\n\n")
