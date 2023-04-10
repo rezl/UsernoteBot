@@ -2,8 +2,6 @@ import traceback
 from threading import Thread
 import os
 
-from praw.exceptions import RedditAPIException
-
 import config
 import time
 import praw
@@ -78,39 +76,20 @@ def handle_comment_stream(discord_client, subreddit_tracker, reddit_handler):
     for comment in subreddit.stream.comments():
         if comment.author not in subreddit_tracker.get_cached_mods():
             continue
-        for i in range(max_retries):
-            try:
-                handle_mod_response(discord_client, subreddit_tracker, reddit_handler, comment)
-                break
-            except RedditAPIException as e:
-                message = f"API Exception in comment processing: {e}\n```{traceback.format_exc()}```\n\n" \
-                          f"Retrying in {retry_wait_time_secs} seconds..."
-                discord_client.send_error_msg(message)
-                print(message)
-                if i == max_retries - 1:
-                    reddit_handler.send_message(comment.author, "Error during removal request processing",
-                                                        f"I've encountered an error whilst actioning your request:"
-                                                        f"  \n\n"
-                                                        f"URL: https://www.reddit.com{comment.permalink}  \n\n"
-                                                        f"Error: {e}\n\n"
-                                                        f"Please review to ensure all"
-                                                        f" is as expected. If your command is in the correct format, "
-                                                        f"e.g. \".r 1,2,3\", please raise this issue to the developers")
-                else:
-                    time.sleep(retry_wait_time_secs)
-            except Exception as e:
-                message = f"Exception in comment processing: {e}\n```{traceback.format_exc()}```"
-                discord_client.send_error_msg(message)
-                print(message)
-                reddit_handler.send_message(comment.author, "Error during removal request processing",
-                                                    f"I've encountered an error whilst actioning your request:"
-                                                    f"  \n\n"
-                                                    f"URL: https://www.reddit.com{comment.permalink}  \n\n"
-                                                    f"Error: {e}\n\n"
-                                                    f"Please review to ensure all"
-                                                    f" is as expected. If your command is in the correct format, "
-                                                    f"e.g. \".r 1,2,3\", please raise this issue to the developers")
-                break
+        try:
+            handle_mod_response(discord_client, subreddit_tracker, reddit_handler, comment)
+        except Exception as e:
+            message = f"Exception in comment processing: {e}\n```{traceback.format_exc()}```"
+            discord_client.send_error_msg(message)
+            print(message)
+            reddit_handler.send_message(comment.author, "Error during removal request processing",
+                                        f"I've encountered an error whilst actioning your request:"
+                                        f"  \n\n"
+                                        f"URL: https://www.reddit.com{comment.permalink}  \n\n"
+                                        f"Error: {e}\n\n"
+                                        f"Please review to ensure all is as expected. "
+                                        f"If your command is in the correct format, "
+                                        f"e.g. \".r 1,2,3\", please raise this issue to the developers")
 
 
 def handle_mod_response(discord_client, subreddit_tracker, reddit_handler, mod_comment):
@@ -169,18 +148,18 @@ def handle_mod_response(discord_client, subreddit_tracker, reddit_handler, mod_c
         ban_message = ("Ban:" + (ban_type if ban_type.isnumeric() else "Perm" + " " + internal_detail)
                        if ban_type else "")
         reddit_handler.send_message(mod_comment.author, "Bot Action Summary",
-                                            f"I have performed the following:\n\n"
-                                            f"URL: https://www.reddit.com{actionable_content.permalink}  \n\n"
-                                            f"Usernote detail: {full_note}\n\n"
-                                            f"{ban_message}")
+                                    f"I have performed the following:\n\n"
+                                    f"URL: https://www.reddit.com{actionable_content.permalink}  \n\n"
+                                    f"Usernote detail: {full_note}\n\n"
+                                    f"{ban_message}")
     elif command_type in [".n", ".u"]:
         print(f"Usernoting: {actionable_content.author.name} for {rules_str}: {actionable_content.permalink}")
         reddit_handler.write_usernote(url, actionable_content.author.name, None, full_note)
         reddit_handler.remove_content("Mod removal request: mod", mod_comment)
         reddit_handler.send_message(mod_comment.author, "Bot Action Summary",
-                                            f"I have performed the following:\n\n"
-                                            f"URL: https://www.reddit.com{actionable_content.permalink}  \n\n"
-                                            f"Usernote detail: {full_note}\n\n")
+                                    f"I have performed the following:\n\n"
+                                    f"URL: https://www.reddit.com{actionable_content.permalink}  \n\n"
+                                    f"Usernote detail: {full_note}\n\n")
 
 
 def get_id(fullname):
