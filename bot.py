@@ -135,7 +135,7 @@ def handle_mod_response(discord_client, subreddit_tracker, reddit_handler, mod_c
     message = find_message(remaining_commands)
 
     rules_str = ("R" + ",".join(str(x) for x in rules_int)) if len(rules_int) > 0 else "No cited rules"
-    full_note = rules_str + (": " + message if message else "")
+    full_note = f"[{mod_comment.author.name}] {rules_str}: {message if message else ''}"
     if command_type == ".r":
         print(f"Removing+Usernoting: {actionable_content.author.name} for {rules_str}: {actionable_content.permalink}")
         reddit_handler.write_removal_reason(actionable_content, rules_int)
