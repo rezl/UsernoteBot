@@ -39,7 +39,7 @@ class RedditActionsHandler:
             reddit_rule_message = reddit_rule_message + rule_message
 
         response = f"Hi, thanks for contributing." \
-                   f"However, your submission was removed from r/collapse.\n\n" \
+                   f"However, your submission was removed from r/{self.subreddit.display_name}.\n\n" \
                    f"{reddit_rule_message}" \
                    f"You can message the mods if you feel this was in error," \
                    f" please include a link to the comment or post in question."
