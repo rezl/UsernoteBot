@@ -2,6 +2,8 @@ import traceback
 from threading import Thread
 import os
 
+from praw.reddit import Submission
+
 import config
 import time
 import praw
@@ -112,6 +114,14 @@ def handle_mod_response(discord_client, subreddit_tracker, reddit_handler, mod_c
     for note in notes:
         if note.url is None:
             continue
+        # special handling for submission content, as submission IDs are included in all comment urls
+        if isinstance(actionable_content, Submission):
+            # Expected formats in usernotes (from historical notes):
+            #    Comment removals: https://reddit.com/comments/<submission_id>/-/<comment_id
+            #    Post removals: https://reddit.com/<submission_id>
+            # Attempt to filter on both "comment" and "-" to identify comment usernotes, and skip for Submission removal
+            if ("comment" in note.url) or (len(note.url.split("-")) > 1):
+                continue
         # already usernoted: a usernote already contains the link to this content
         if actionable_content.id in note.url:
             print(f"Ignoring as already actioned {actionable_content.id}:"
