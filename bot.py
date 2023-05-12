@@ -108,6 +108,16 @@ def handle_mod_response(discord_client, subreddit_tracker, reddit_handler, mod_c
     print(action_request)
 
     actionable_content = mod_comment.parent()
+
+    # non-full mods cannot remove posts
+    if command_type == ".r" and isinstance(actionable_content, Submission) and \
+            (mod_comment.author.name not in subreddit_tracker.full_mods):
+        reddit_handler.send_message(mod_comment.author, "Error during removal request",
+                                    f"I could not remove this post, as you are a comment mod:\n\n"
+                                    f"URL: https://www.reddit.com{actionable_content.permalink}  \n\n"
+                                    f"I applaud your enthusiasm, keep it up! But with comments, for now :)")
+        return
+
     url = f"https://www.reddit.com{actionable_content.permalink}"
     notes = reddit_handler.toolbox.usernotes.list_notes(actionable_content.author.name, reverse=True)
 
@@ -137,9 +147,9 @@ def handle_mod_response(discord_client, subreddit_tracker, reddit_handler, mod_c
     # if ban command exists, remove it from the remaining commands
     if ban_type and remaining_commands:
         remaining_commands.remove(remaining_commands[0])
-    # if mod can't ban, overwrite to empty
-    if mod_comment.author.name not in subreddit_tracker.ban_mods:
-        discord_client.send_error_msg(f"Detected ban attempt from a mod without ban permissions:\n\n{action_request}")
+    # non-FMs can't ban, overwrite to empty
+    if mod_comment.author.name not in subreddit_tracker.full_mods:
+        discord_client.send_error_msg(f"Detected ban attempt from a non-FM:\n\n{action_request}")
         ban_type = ""
 
     message = find_message(remaining_commands)

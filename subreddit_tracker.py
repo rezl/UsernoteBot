@@ -7,7 +7,7 @@ class SubredditTracker:
 
         self.mods_last_check = datetime.utcfromtimestamp(0)
         self.removal_mods = list()
-        self.ban_mods = list()
+        self.full_mods = list()
         self.get_cached_mods()
 
     def get_cached_mods(self):
@@ -15,15 +15,15 @@ class SubredditTracker:
             return self.removal_mods
 
         removal_mods = list()
-        ban_mods = list()
+        full_mods = list()
         for moderator in self.subreddit.moderator():
             if any(x in ["all", "posts"] for x in moderator.mod_permissions):
                 removal_mods.append(moderator.name)
             if any(x in ["all", "access"] for x in moderator.mod_permissions):
-                ban_mods.append(moderator.name)
+                full_mods.append(moderator.name)
         self.mods_last_check = datetime.utcnow()
         self.removal_mods = removal_mods
-        self.ban_mods = ban_mods
+        self.full_mods = full_mods
         print(f"Refreshed removal_mods: {removal_mods}")
-        print(f"Refreshed ban_mods: {ban_mods}")
+        print(f"Refreshed full_mods: {full_mods}")
         return removal_mods
