@@ -161,7 +161,7 @@ def handle_mod_response(discord_client, subreddit_tracker, reddit_handler, mod_c
     if ban_type and remaining_commands:
         remaining_commands.remove(remaining_commands[0])
     # non-FMs can't ban, overwrite to empty
-    if mod_comment.author.name not in subreddit_tracker.full_mods:
+    if ban_type and mod_comment.author.name not in subreddit_tracker.full_mods:
         discord_client.send_error_msg(f"Detected ban attempt from a non-FM:\n\n{action_request}")
         ban_type = ""
 
