@@ -112,10 +112,20 @@ def handle_mod_response(discord_client, subreddit_tracker, reddit_handler, mod_c
     # non-full mods cannot remove posts
     if command_type == ".r" and isinstance(actionable_content, Submission) and \
             (mod_comment.author.name not in subreddit_tracker.full_mods):
+        reddit_handler.remove_content("Mod removal request: mod", mod_comment)
         reddit_handler.send_message(mod_comment.author, "Error during removal request",
                                     f"I could not remove this post, as you are a comment mod:\n\n"
                                     f"URL: https://www.reddit.com{actionable_content.permalink}  \n\n"
                                     f"I applaud your enthusiasm, keep it up! But with comments, for now :)")
+        return
+
+    if not actionable_content.author:
+        reddit_handler.remove_content("Mod removal request: mod", mod_comment)
+        reddit_handler.send_message(mod_comment.author, "Unable to action content: content deleted",
+                                    f"I could not action this content, as it was deleted:\n\n"
+                                    f"URL: https://www.reddit.com{actionable_content.permalink}  \n\n"
+                                    f"I have removed your mod comment."
+                                    f" I cannot ban, remove, or usernote the unknown user.")
         return
 
     url = f"https://www.reddit.com{actionable_content.permalink}"
