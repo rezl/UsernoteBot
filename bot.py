@@ -171,8 +171,8 @@ def handle_mod_response(discord_client, subreddit_tracker, reddit_handler, mod_c
     full_note = f"[{mod_comment.author.name}] {rules_str}: {message if message else ''}"
     if command_type == ".r":
         print(f"Removing+Usernoting: {actionable_content.author.name} for {rules_str}: {actionable_content.permalink}")
-        reddit_handler.write_removal_reason(actionable_content, rules_int)
         reddit_handler.remove_content("Mod removal request: mod", mod_comment)
+        reddit_handler.write_removal_reason(actionable_content, rules_int)
         reddit_handler.remove_content("Mod removal request: user", actionable_content)
         reddit_handler.write_usernote(url, actionable_content.author.name, None, full_note)
         internal_detail = f"Usernotes command by {mod_comment.author.name} for {full_note}"
@@ -187,8 +187,8 @@ def handle_mod_response(discord_client, subreddit_tracker, reddit_handler, mod_c
                                     f"{ban_message}")
     elif command_type in [".n", ".u"]:
         print(f"Usernoting: {actionable_content.author.name} for {rules_str}: {actionable_content.permalink}")
-        reddit_handler.write_usernote(url, actionable_content.author.name, None, full_note)
         reddit_handler.remove_content("Mod removal request: mod", mod_comment)
+        reddit_handler.write_usernote(url, actionable_content.author.name, None, full_note)
         reddit_handler.send_message(mod_comment.author, "Bot Action Summary",
                                     f"I have performed the following:\n\n"
                                     f"URL: https://www.reddit.com{actionable_content.permalink}  \n\n"
