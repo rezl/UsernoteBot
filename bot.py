@@ -108,11 +108,11 @@ def handle_mod_response(discord_client, subreddit_tracker, reddit_handler, mod_c
     print(action_request)
 
     if not mod_comment.author or mod_comment.removed:
-        print("Ignoring - mod comment is removed")
+        print("Ignoring - mod comment is removed, should already be actioned")
         return
 
     actionable_content = mod_comment.parent()
-    if not actionable_content.author or actionable_content.removed:
+    if not actionable_content.author:
         reddit_handler.remove_content("Mod removal request: mod", mod_comment)
         reddit_handler.send_message(mod_comment.author, "Unable to action content: content deleted",
                                     f"I could not action this content, as it was deleted:\n\n"
@@ -132,24 +132,8 @@ def handle_mod_response(discord_client, subreddit_tracker, reddit_handler, mod_c
         return
 
     url = f"https://www.reddit.com{actionable_content.permalink}"
-    notes = reddit_handler.toolbox.usernotes.list_notes(actionable_content.author.name, reverse=True)
 
-    for note in notes:
-        if note.url is None:
-            continue
-        # special handling for submission content, as submission IDs are included in all comment urls
-        if isinstance(actionable_content, Submission):
-            # Expected formats in usernotes (from historical notes):
-            #    Comment removals: https://reddit.com/comments/<submission_id>/-/<comment_id
-            #    Post removals: https://reddit.com/<submission_id>
-            # Attempt to filter on both "comment" and "-" to identify comment usernotes, and skip for Submission removal
-            if ("comment" in note.url) or (len(note.url.split("-")) > 1):
-                continue
-        # already usernoted: a usernote already contains the link to this content
-        if actionable_content.id in note.url:
-            print(f"Ignoring as already actioned {actionable_content.id}:"
-                  f" {actionable_content.author.name}: {actionable_content.permalink}")
-            return
+    # supported format: ".r/.n/.u <rules> <ban> <usernote>"
 
     rules_int = find_rules(remaining_commands)
     # if rules exist, remove it from the remaining commands
