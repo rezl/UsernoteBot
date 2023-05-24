@@ -28,12 +28,16 @@ class RedditActionsHandler:
         note = ToolboxNote(redditor, detail, warning=note_type, url=url)
         self.reddit_call(lambda: self.toolbox.usernotes.add(note))
 
-    def write_removal_reason(self, content, rules):
-        print(f"Writing removal comment for {str(content)}: {str(rules)}")
+    def write_removal_reason(self, content, cited_rules):
+        print(f"Writing removal comment for {str(content)}: {str(cited_rules)}")
 
         reddit_rule_message = ""
-        for rule in rules:
-            rule_detail = self.subreddit.rules[rule - 1]
+        sub_rules = list(self.subreddit.rules)
+        for cited_rule in cited_rules:
+            # ignore rules that aren't included in the sub set
+            if cited_rule < len(sub_rules):
+                continue
+            rule_detail = sub_rules[cited_rule - 1]
             rule_message = f"Rule {rule_detail.priority + 1}: {rule_detail.short_name}\n\n" \
                            f"{rule_detail.description}\n\n"
             reddit_rule_message = reddit_rule_message + rule_message
