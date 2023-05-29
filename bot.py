@@ -10,6 +10,7 @@ import praw
 
 from discord_client import DiscordClient
 from reddit_actions_handler import RedditActionsHandler
+from settings import SettingsFactory
 from subreddit_tracker import SubredditTracker
 from resilient_thread import ResilientThread
 from usernote_utils import find_rules, find_ban, find_message
@@ -42,6 +43,11 @@ def run_forever():
         for subreddit_name in subreddit_names:
             create_usernotes_thread(bot_password, bot_username, client_id, client_secret,
                                     discord_client, subreddit_name)
+            reddit_handler = create_usernotes_thread(bot_password, bot_username, client_id, client_secret,
+                                                     discord_client, subreddit_name)
+            settings = SettingsFactory.get_settings(subreddit_name)
+            if settings.guild_name:
+                discord_client.add_usernote_guild(settings.guild_name, reddit_handler)
     except Exception as e:
         message = f"Exception in main processing: {e}\n```{traceback.format_exc()}```"
         discord_client.send_error_msg(message)
@@ -71,6 +77,7 @@ def create_usernotes_thread(bot_password, bot_username, client_id, client_secret
                              target=handle_comment_stream, args=(discord_client, subreddit_tracker, reddit_handler))
     thread.start()
     print(f"Created {subreddit_name} subreddit thread")
+    return reddit_handler
 
 
 def handle_comment_stream(discord_client, subreddit_tracker, reddit_handler):
