@@ -58,3 +58,8 @@ def find_message(command):
     if not command:
         return ""
     return " ".join(command)
+
+
+def get_id(fullname):
+    split = fullname.split("_")
+    return split[1] if len(split) > 0 else split[0]
