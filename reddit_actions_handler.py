@@ -35,7 +35,7 @@ class RedditActionsHandler:
         sub_rules = list(self.subreddit.rules)
         for cited_rule in cited_rules:
             # ignore rules that aren't included in the sub set
-            if cited_rule < len(sub_rules):
+            if cited_rule > len(sub_rules):
                 continue
             rule_detail = sub_rules[cited_rule - 1]
             rule_message = f"Rule {rule_detail.priority + 1}: {rule_detail.short_name}\n\n" \
