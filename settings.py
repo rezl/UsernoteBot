@@ -4,12 +4,21 @@ import re
 class Settings:
     # set to True to prevent any bot actions (report, remove, comments)
     is_dry_run = False
+    guild_name = None
+
+
+class CollapseSettings(Settings):
+    guild_name = 'Collapse Moderators'
+
+
+class UFOsSettings(Settings):
+    guild_name = 'UFO Moderators'
 
 
 class SettingsFactory:
     settings_classes = {
-        'collapse': Settings,
-        'ufos': Settings,
+        'collapse': CollapseSettings,
+        'ufos': UFOsSettings,
     }
 
     @staticmethod
@@ -20,4 +29,3 @@ class SettingsFactory:
 
         settings_class = SettingsFactory.settings_classes.get(subreddit_name.lower(), Settings)
         return settings_class()
-
