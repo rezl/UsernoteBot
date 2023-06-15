@@ -61,6 +61,7 @@ class RedditActionsHandler:
 
     def ban_user(self, user, external_detail, internal_detail, duration):
         print(f"Banning {user} for {duration}, detail: {internal_detail}")
+        internal_detail = (internal_detail[:97] + '...') if len(internal_detail) > 100 else internal_detail
         if duration.isnumeric():
             self.reddit_call(lambda: self.subreddit.banned.add(user, ban_message=external_detail,
                                                                ban_reason=internal_detail, duration=int(duration)))
