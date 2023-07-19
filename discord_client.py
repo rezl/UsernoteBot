@@ -153,17 +153,20 @@ class DiscordClient(commands.Bot):
                     notes = reddit_actions_handler.toolbox.usernotes.list_notes(username, reverse=True)
                 except KeyError:
                     # raised if user isn't in toolbox usernotes
-                    embed = discord.Embed(title=f"Usernote History for {username}",
-                                          url=f"https://reddit.com/u/{username}", color=0xFF5733)
-                    embed.add_field(name="Number of Usernotes", value="No Usernotes")
+                    message = f"```" \
+                              f"Usernote History for {username} (https://reddit.com/u/{username})\n" \
+                              f"Number of Usernotes: No Usernotes\n\n" \
+                              f"```"
+                    await ctx.send(message)
                     return
 
-                embed = discord.Embed(title=f"Usernote History for {username}",
-                                      url=f"https://reddit.com/u/{username}", color=0xFF5733)
-                embed.add_field(name="Number of Usernotes", value=len(notes), inline=True)
+                message = f"```" \
+                          f"Usernote History for {username} (https://reddit.com/u/{username})\n" \
+                          f"Number of Usernotes: {len(notes)}\n\n"
                 for note in notes:
-                    embed.add_field(name=note.human_time, value=note.note, inline=True)
-                await ctx.send(embed=embed)
+                    message += f"{note.human_time} ({note.mod}, {note.warning}): {note.note}\n"
+                message += "```"
+                await ctx.send(message)
             except Exception as ex:
                 error_msg = f"Exception in main processing: {ex}\n```{traceback.format_exc()}```"
                 self.send_error_msg(error_msg)
