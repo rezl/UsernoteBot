@@ -5,6 +5,7 @@ import typing
 import discord
 from discord import ui
 from discord.ext import commands
+from prawcore import NotFound
 
 from settings import Settings
 from usernote_utils import find_rules, find_ban
@@ -103,6 +104,71 @@ class DiscordClient(commands.Bot):
                 await ctx.channel.send(f"I am now running in dry run mode")
             else:
                 await ctx.channel.send(f"I am now NOT running in dry run mode")
+
+        @self.command(aliases=["q", "qn", "query"],
+                      description="Queries usernotes", brief="Queries usernotes", usage=".q")
+        async def query_usernotes(ctx, username: typing.Optional[str] = ""):
+            try:
+                if username == "":
+                    await ctx.send("Include a username with this command, such as '.q fuckspez'")
+                    return
+
+                # should be called from within a supported server, by someone with necessary role
+                guild = ctx.guild
+                if not guild:
+                    await ctx.send("Cannot use in DM - please request in a supported discord server")
+                    return
+                if guild not in self.guild_reddit_map:
+                    await ctx.send("Cannot use - I don't know this discord server - contact developers")
+                    return
+                member = guild.get_member(ctx.author.id)
+                if member is None:
+                    await ctx.send("Cannot identify you")
+                    return
+                if not any(role.name in ["Moderator", "Comment Moderator"] for role in member.roles):
+                    await ctx.send("Cannot action you without necessary role")
+                    return
+
+                reddit_actions_handler = self.guild_reddit_map[guild]
+                subreddit = reddit_actions_handler.subreddit
+                mod = get_username(guild, ctx.author)
+                print(f"Received query request: {mod} {str(username)} "
+                      f"from guild [{str(guild)}], channel [{str(ctx.channel)}]")
+                subreddit_mod = subreddit.moderator(mod)
+                if not subreddit_mod:
+                    user_response = f"I cannot find a moderator with name: {mod}. " \
+                                    f"Please change your discord or server name, or contact developers"
+                    print(user_response)
+                    await ctx.send(user_response)
+                    return
+                try:
+                    reddit_actions_handler.reddit.redditor(username).id
+                except NotFound:
+                    user_response = f"I cannot find a user with name: {username}. Please match their username exactly."
+                    print(user_response)
+                    await ctx.send(user_response)
+                    return
+
+                try:
+                    notes = reddit_actions_handler.toolbox.usernotes.list_notes(username, reverse=True)
+                except KeyError:
+                    # raised if user isn't in toolbox usernotes
+                    embed = discord.Embed(title=f"Usernote History for {username}",
+                                          url=f"https://reddit.com/u/{username}", color=0xFF5733)
+                    embed.add_field(name="Number of Usernotes", value="No Usernotes")
+                    return
+
+                embed = discord.Embed(title=f"Usernote History for {username}",
+                                      url=f"https://reddit.com/u/{username}", color=0xFF5733)
+                embed.add_field(name="Number of Usernotes", value=len(notes), inline=True)
+                for note in notes:
+                    embed.add_field(name=note.human_time, value=note.note, inline=True)
+                await ctx.send(embed=embed)
+            except Exception as ex:
+                error_msg = f"Exception in main processing: {ex}\n```{traceback.format_exc()}```"
+                self.send_error_msg(error_msg)
+                print(error_msg)
+
 
         @self.command(aliases=["u", "un", "a", "act", "action", "r"],
                       description=usernote_description, brief=usernote_brief, usage=".a")
