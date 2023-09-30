@@ -41,8 +41,6 @@ def run_forever():
 
     try:
         for subreddit_name in subreddit_names:
-            create_usernotes_thread(bot_password, bot_username, client_id, client_secret,
-                                    discord_client, subreddit_name)
             reddit_handler = create_usernotes_thread(bot_password, bot_username, client_id, client_secret,
                                                      discord_client, subreddit_name)
             settings = SettingsFactory.get_settings(subreddit_name)
