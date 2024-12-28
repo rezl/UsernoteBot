@@ -75,7 +75,7 @@ class DiscordClient(commands.Bot):
         startup_message = f"{self.user} is in the following guilds:\n" \
                           f"{guilds_msg}"
         print(startup_message)
-        await self.error_channel.send(f"I am online for Usernotes script, is_dry_run={Settings.is_dry_run}")
+        await self.error_channel.send(f"I am online for Usernotes script, is_dry_run={Settings.is_dry_run}. Listening on=.")
 
     def send_error_msg(self, message):
         full_message = f"Usernotes script has had an exception. This can normally be ignored, " \
