@@ -4,7 +4,7 @@ usernotebot is a tool that enables moderators to write usernotes or removal comm
 
 Preferably use the toobox bots now available in reddit
 
-The bot actions mod prompts (via comment) with below workflow
+The bot actions mod prompts (via comment) with below workflow 
 
 # Details
 ## REDDIT Workflow:
