@@ -189,7 +189,7 @@ class DiscordClient(commands.Bot):
                 if member is None:
                     await ctx.send("Cannot identify you")
                     return
-                if not any(role.name in ["Moderator", "Comment Moderator"] for role in member.roles):
+                if not any(role.name in ["Moderator", "Comment Moderator", "Admin"] for role in member.roles):
                     await ctx.send("Cannot action you without necessary role")
                     return
 
